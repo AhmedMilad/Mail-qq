@@ -2,6 +2,7 @@ package mails
 
 import (
 	"encoding/json"
+	"log"
 	"mail-qq/queues"
 	"mail-qq/utils"
 	"net/http"
@@ -37,12 +38,15 @@ func SendEmail(c *gin.Context) {
 		return
 	}
 
-	// publish to the mailing queue
-	queues.Publish(data)
+	if err := queues.Publish(data); err != nil {
+		log.Printf("could not queue email: %s", err)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "the mail queue is unavailable, please try again later"})
+		return
+	}
 
 	var resp utils.Response = utils.Response{
 		Message: "The message has been sent successfully.",
 	}
 
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusAccepted, resp)
 }

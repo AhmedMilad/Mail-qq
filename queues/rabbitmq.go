@@ -88,14 +88,22 @@ func Rabbitize(c func(*amqp.Channel) (error, string)) {
 	failOnError(err, msg)
 }
 
-func Publish(msg []byte) {
+func Publish(msg []byte) error {
 
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	failOnError(err, "Failed to connect to RabbitMQ")
+
+	if err != nil {
+		return err
+	}
+
 	defer conn.Close()
 
 	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
+
+	if err != nil {
+		return err
+	}
+
 	defer ch.Close()
 
 	ctx := context.Background()
@@ -112,8 +120,12 @@ func Publish(msg []byte) {
 			Body:         msg,
 		},
 	)
-	failOnError(err, "Could not publish a message")
 
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func SendEmail(ch *amqp.Channel) (error, string) {
@@ -121,7 +133,7 @@ func SendEmail(ch *amqp.Channel) (error, string) {
 	messages, err := ch.Consume(
 		"email_queue",
 		"",    // consumer tag
-		false, // auto-ack (IMPORTANT: false)
+		true,  // auto-ack (IMPORTANT: false)
 		false, // exclusive
 		false, // no-local
 		false, // no-wait
@@ -146,16 +158,21 @@ func SendEmail(ch *amqp.Channel) (error, string) {
 
 		auth := smtp.PlainAuth("", from, password, smtpHost)
 
-		message := []byte("From: " + from + "\r\n" +
+		data := []byte("From: " + from + "\r\n" +
 			"To: " + mailData.To + "\r\n" +
 			"Subject: " + mailData.Subject + "\r\n" +
 			"\r\n" +
 			mailData.Body)
 
-		err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, []string{mailData.To}, message)
+		err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, []string{mailData.To}, data)
 		if err != nil {
+			message.Nack(false, true)
 			log.Fatalf("Failed to send email: %s", err)
 			continue
+		}
+
+		if err := message.Ack(false); err != nil {
+			log.Printf("failed to ack message: %s", err)
 		}
 
 		log.Println("The email has been sent successfully.")
