@@ -20,7 +20,7 @@ func ListEmails(c *gin.Context) {
 		message := "could not fetch the email log"
 		log.Printf(message+" : %s", err)
 
-		c.JSON(http.StatusBadGateway, utils.Response{
+		c.JSON(http.StatusInternalServerError, utils.Response{
 			Message: message,
 		})
 		return
