@@ -76,7 +76,8 @@ func initQueue(ch *amqp.Channel) (error, string) {
 
 func Rabbitize(c func(*amqp.Channel) (error, string)) {
 
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	mqURL := os.Getenv("AMQP_URL")
+	conn, err := amqp.Dial(mqURL)
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
@@ -90,7 +91,8 @@ func Rabbitize(c func(*amqp.Channel) (error, string)) {
 
 func Publish(msg []byte) error {
 
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	mqURL := os.Getenv("AMQP_URL")
+	conn, err := amqp.Dial(mqURL)
 
 	if err != nil {
 		return err
@@ -133,7 +135,7 @@ func SendEmail(ch *amqp.Channel) (error, string) {
 	messages, err := ch.Consume(
 		"email_queue",
 		"",    // consumer tag
-		true,  // auto-ack (IMPORTANT: false)
+		false, // auto-ack (IMPORTANT: false)
 		false, // exclusive
 		false, // no-local
 		false, // no-wait
