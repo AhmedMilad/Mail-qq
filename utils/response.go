@@ -10,5 +10,5 @@ type EmailLogResponse struct {
 	Sender    string `json:"sender"`
 	Recipient string `json:"recipient"`
 	Body      string `json:"body,omitempty"`
-	Subject   string `json"subject"`
+	Subject   string `json:"subject"`
 }

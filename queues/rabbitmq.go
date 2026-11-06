@@ -8,6 +8,7 @@ import (
 	"mail-qq/models"
 	"mail-qq/utils"
 	"os"
+	"time"
 
 	"net/smtp"
 
@@ -169,9 +170,18 @@ func SendEmail(ch *amqp.Channel) (error, string) {
 			mailData.Body)
 
 		err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, []string{mailData.To}, data)
+
 		if err != nil {
-			message.Nack(false, true)
 			log.Printf("Failed to send email: %s", err)
+			if message.Redelivered {
+				// already retried once so drop it
+				message.Nack(false, false)
+			} else {
+				// retry once
+				message.Nack(false, true)
+			}
+			// break time
+			time.Sleep(5 * time.Second)
 			continue
 		}
 
