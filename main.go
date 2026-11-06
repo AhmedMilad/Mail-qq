@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"mail-qq/database"
 )
 
 func main() {
@@ -17,6 +18,8 @@ func main() {
 		log.Fatal("Error loading .env file")
 		return
 	}
+
+	database.Init()
 
 	r := gin.Default()
 

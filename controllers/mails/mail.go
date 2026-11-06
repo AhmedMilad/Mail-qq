@@ -3,6 +3,8 @@ package mails
 import (
 	"encoding/json"
 	"log"
+	"mail-qq/database"
+	"mail-qq/models"
 	"mail-qq/queues"
 	"mail-qq/utils"
 	"net/http"
@@ -12,10 +14,34 @@ import (
 
 func ListEmails(c *gin.Context) {
 
-	var resp []utils.Response = []utils.Response{
-		{
-			Message: "Here is your message",
-		},
+	var emailLog []models.EmailLog
+
+	if err := database.Conn.Order("id desc").Find(&emailLog).Error; err != nil {
+		message := "could not fetch the email log"
+		log.Printf(message+" : %s", err)
+
+		c.JSON(http.StatusBadGateway, utils.Response{
+			Message: message,
+		})
+		return
+	}
+
+	var logs []utils.EmailLogResponse
+
+	for _, log := range emailLog {
+
+		logs = append(logs, utils.EmailLogResponse{
+			ID:        log.ID,
+			Sender:    log.From,
+			Recipient: log.To,
+			Body:      log.Body,
+			Subject:   log.Subject,
+		})
+	}
+
+	var resp utils.Response = utils.Response{
+		Message: "Fetched email log successfully.",
+		Data:    logs,
 	}
 
 	c.JSON(http.StatusOK, resp)

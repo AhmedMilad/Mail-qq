@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"mail-qq/database"
+	"mail-qq/models"
 	"mail-qq/utils"
 	"os"
 
@@ -169,12 +171,22 @@ func SendEmail(ch *amqp.Channel) (error, string) {
 		err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, []string{mailData.To}, data)
 		if err != nil {
 			message.Nack(false, true)
-			log.Fatalf("Failed to send email: %s", err)
+			log.Printf("Failed to send email: %s", err)
 			continue
 		}
 
 		if err := message.Ack(false); err != nil {
 			log.Printf("failed to ack message: %s", err)
+		}
+
+		if err := database.Conn.Create(&models.EmailLog{
+			From:    from,
+			To:      mailData.To,
+			Body:    mailData.Body,
+			Subject: mailData.Subject,
+		}).Error; err != nil {
+			log.Printf("could not create an email log: %s", err)
+
 		}
 
 		log.Println("The email has been sent successfully.")
